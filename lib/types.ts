@@ -56,29 +56,29 @@ interface Base {
 }
 
 export type SignalingPacketTypes =
-| CandidatePacket
-| ClosePacket
-| ConnectedPacket
-| ConnectPacket
-| CreatePacket
-| CredentialsPacket
-| DescriptionPacket
-| DisconnectedPacket
-| DisconnectPacket
-| ErrorPacket
-| EventPacket
-| HelloPacket
-| JoinedPacket
-| JoinPacket
-| LeaderPacket
-| LobbyUpdatePacket
-| LobbyUpdatedPacket
-| LeavePacket
-| LeftPacket
-| ListPacket
-| LobbiesPacket
-| PingPacket
-| WelcomePacket
+  | CandidatePacket
+  | ClosePacket
+  | ConnectedPacket
+  | ConnectPacket
+  | CreatePacket
+  | CredentialsPacket
+  | DescriptionPacket
+  | DisconnectedPacket
+  | DisconnectPacket
+  | ErrorPacket
+  | EventPacket
+  | HelloPacket
+  | JoinedPacket
+  | JoinPacket
+  | LeaderPacket
+  | LobbyUpdatePacket
+  | LobbyUpdatedPacket
+  | LeavePacket
+  | LeftPacket
+  | ListPacket
+  | LobbiesPacket
+  | PingPacket
+  | WelcomePacket
 
 export interface PingPacket extends Base {
   type: 'ping'
@@ -193,7 +193,7 @@ export interface CandidatePacket extends Base {
   type: 'candidate'
   source: string
   recipient: string
-  candidate: RTCIceCandidate | null
+  candidate: RTCIceCandidate | RTCIceCandidateInit | null
 }
 
 export interface DescriptionPacket extends Base {

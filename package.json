@@ -1,6 +1,6 @@
 {
-  "name": "@poki/netlib",
-  "version": "0.0.18",
+  "name": "@smartberry/netlib",
+  "version": "0.0.19",
   "license": "ISC",
   "source": "lib/index.ts",
   "main": "dist/netlib.js",
@@ -34,13 +34,14 @@
     "build": "parcel build",
     "lint": "ts-standard --fix",
     "cucumber": "cucumber-js --require 'features/support/**/*.ts' --require-module ts-node/register --order random --retry 2 --retry-tag-filter flakey",
-    "watch": "parcel --no-hmr example/index.html"
+    "watch": "parcel --no-hmr example/index.html",
+    "server:start": "docker build -t netlib . && docker run --rm --name netlib-signaling -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 -e ENV=local netlib",
+    "server:restart": "docker stop netlib-signaling && yarn server:start"
   },
   "dependencies": {
     "eventemitter3": "^5.0.4"
   },
   "devDependencies": {
-    "@cucumber/cucumber": "^12.5.0",
     "@parcel/packager-ts": "^2.16.3",
     "@parcel/transformer-typescript-types": "^2.16.3",
     "@roamhq/wrtc": "^0.9.1",
@@ -59,6 +60,5 @@
   "browserslist": [
     "defaults",
     "not IE 11"
-  ],
-  "packageManager": "yarn@1.22.19+sha1.4ba7fc5c6e704fce2066ecbfb0b0d8976fe62447"
+  ]
 }

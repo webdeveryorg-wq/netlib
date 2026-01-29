@@ -34,7 +34,7 @@ export default class Peer {
   /**
    * @internal
    */
-  constructor (private readonly network: Network, private readonly signaling: Signaling, public readonly id: string, public readonly config: PeerConfiguration, private readonly polite: boolean) {
+  constructor(private readonly network: Network, private readonly signaling: Signaling, public readonly id: string, public readonly config: PeerConfiguration, private readonly polite: boolean) {
     this.channels = {}
     this.network.log('creating peer')
 
@@ -45,11 +45,17 @@ export default class Peer {
       this.conn.addEventListener('icecandidate', e => {
         const candidate = e.candidate
         if (candidate !== null) {
+          const candidateInit = candidate.toJSON()
+          if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+            if (candidateInit.candidate && candidateInit.candidate.includes('.local')) {
+              candidateInit.candidate = candidateInit.candidate.replace(/([a-f0-9-]+\.local)/g, '127.0.0.1')
+            }
+          }
           signaling.send({
             type: 'candidate',
             source: this.network.id,
             recipient: this.id,
-            candidate
+            candidate: candidateInit
           })
         }
       })
@@ -57,6 +63,10 @@ export default class Peer {
       this.testSessionWrapper = wrapSessionDescription
     }
     this.conn.addEventListener('negotiationneeded', () => {
+      this.network.log('negotiationneeded', this.id)
+      if (this.politenessTimeout !== undefined) {
+        clearTimeout(this.politenessTimeout)
+      }
       this.politenessTimeout = setTimeout(() => {
         (async () => {
           try {
@@ -64,15 +74,12 @@ export default class Peer {
               return
             }
             this.makingOffer = true
-            if (process.env.NODE_ENV === 'test') {
-              // Running tests with node and the wrtc package causes the
-              // setLocalDescription to fail with undefined as argment.
-              await this.conn.setLocalDescription(await this.conn.createOffer())
-            } else {
-              await this.conn.setLocalDescription()
-            }
+            const offer = await this.conn.createOffer()
+            await this.conn.setLocalDescription(offer)
+
             const description = this.conn.localDescription
             if (description != null) {
+              this.network.log('sending offer', this.id, description.sdp)
               await this.testSessionWrapper?.(description, this.config, this.network.id, this.id)
               this.signaling.send({
                 type: 'description',
@@ -82,12 +89,12 @@ export default class Peer {
               })
             }
           } catch (e) {
-            const error = new SignalingError('unknown-error', e as string)
+            const error = new SignalingError('unknown-error', (e as any).toString())
             this.network._onSignalingError(error)
           } finally {
             this.makingOffer = false
           }
-        })().catch(_ => {})
+        })().catch(_ => { })
       }, this.polite ? 100 : 0)
     })
 
@@ -96,12 +103,16 @@ export default class Peer {
     }, 500)
     this.conn.addEventListener('signalingstatechange', () => this.checkState())
     this.conn.addEventListener('connectionstatechange', () => this.checkState())
-    this.conn.addEventListener('iceconnectionstatechange', () => this.checkState())
+    this.conn.addEventListener('iceconnectionstatechange', () => {
+      this.network.log('ice connection state', this.id, this.conn.iceConnectionState)
+      this.checkState()
+    })
 
     this.network.emit('connecting', this)
 
     let i = 0
-    for (const label in this.network.dataChannels) {
+    const labels = Object.keys(this.network.dataChannels).sort()
+    for (const label of labels) {
       const chan = this.conn.createDataChannel(label, {
         ...this.network.dataChannels[label],
         id: i++,
@@ -143,7 +154,7 @@ export default class Peer {
     }
   }
 
-  public close (reason?: string): void {
+  public close(reason?: string): void {
     if (this.closing) {
       return
     }
@@ -176,7 +187,7 @@ export default class Peer {
     }
   }
 
-  private checkState (): void {
+  private checkState(): void {
     const now = performance.now()
     const connectionState = this.conn.connectionState ?? this.conn.iceConnectionState
     if (this.closing) {
@@ -236,6 +247,7 @@ export default class Peer {
             await this.conn.addIceCandidate(packet.candidate)
           } catch (e) {
             if (!this.ignoreOffer) {
+              console.error('failed to add ice candidate', e)
               throw e
             }
           }
@@ -258,13 +270,11 @@ export default class Peer {
           await this.conn.setRemoteDescription(description)
           this.isSettingRemoteAnswerPending = false
           if (description.type === 'offer') {
-            if (process.env.NODE_ENV === 'test') {
-              await this.conn.setLocalDescription(await this.conn.createAnswer())
-            } else {
-              await this.conn.setLocalDescription()
-            }
+            const answer = await this.conn.createAnswer()
+            await this.conn.setLocalDescription(answer)
             const description = this.conn.localDescription
             if (description != null) {
+              this.network.log('sending answer', this.id, description.sdp)
               await this.testSessionWrapper?.(description, this.config, this.network.id, this.id)
               this.signaling.send({
                 type: 'description',
@@ -279,7 +289,7 @@ export default class Peer {
     }
   }
 
-  send (channel: string, data: string | Blob | ArrayBuffer | ArrayBufferView): void {
+  send(channel: string, data: string | Blob | ArrayBuffer | ArrayBufferView): void {
     if (!(channel in this.channels)) {
       throw new Error('unknown channel ' + channel)
     }
@@ -289,12 +299,12 @@ export default class Peer {
     }
   }
 
-  toString (): string {
+  toString(): string {
     return `[Peer: ${this.id}]`
   }
 }
 
-async function wrapSessionDescription (desc: RTCSessionDescription, config: PeerConfiguration, selfID: string, otherID: string): Promise<void> {
+async function wrapSessionDescription(desc: RTCSessionDescription, config: PeerConfiguration, selfID: string, otherID: string): Promise<void> {
   if (config.testproxyURL === undefined) {
     return
   }
@@ -316,5 +326,5 @@ async function wrapSessionDescription (desc: RTCSessionDescription, config: Peer
     }
   }
 
-  ;(desc as any).sdp = lines.join('\r\n')
+  ; (desc as any).sdp = lines.join('\r\n')
 }

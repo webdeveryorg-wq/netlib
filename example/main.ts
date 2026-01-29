@@ -1,7 +1,7 @@
 import { Network } from '../lib'
 
-const n = new Network('d0fe1ca1-7fa0-47ed-9469-6c792f68bae0')
-;(window as any).n = n
+const n = new Network('d0fe1ca1-7fa0-47ed-9469-6c792f68bae0', { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }, 'ws://localhost:8080/v0/signaling')
+  ; (window as any).n = n
 
 const mapNames = ['de_dust2', 'de_inferno', 'de_nuke', 'de_mirage', 'de_overpass', 'de_train', 'de_vertigo']
 
@@ -15,6 +15,9 @@ const log = (text: string): void => {
     out.value += `[${time}] ${text.trim()}\n`
     out.scrollTop = out.scrollHeight
   }
+}
+n.log = (text: string, ...args: any[]): void => {
+  log(`${text} ${args.map(a => JSON.stringify(a)).join(' ')}`)
 }
 
 n.on('ready', () => {

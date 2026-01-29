@@ -37,6 +37,11 @@ func NewCredentialsClient(appID, key string, lifetime time.Duration) *Credential
 
 func (c *CredentialsClient) Run(ctx context.Context) {
 	if os.Getenv("ENV") != "production" && c.appID == "" {
+		c.mutex.Lock()
+		c.cached = &Credentials{
+			URL: "stun:stun.l.google.com:19302",
+		}
+		c.mutex.Unlock()
 		return
 	}
 

@@ -35,7 +35,7 @@
     "lint": "ts-standard --fix",
     "cucumber": "cucumber-js --require 'features/support/**/*.ts' --require-module ts-node/register --order random --retry 2 --retry-tag-filter flakey",
     "watch": "parcel --no-hmr example/index.html",
-    "server:start": "docker build -t netlib . && docker run --rm --name netlib-signaling -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 -e ENV=local netlib",
+    "server:start": "docker build -t netlib . && docker run --rm --add-host host.docker.internal:host-gateway --name netlib-signaling -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 -e ENV=local netlib",
     "server:restart": "docker stop netlib-signaling && yarn server:start"
   },
   "dependencies": {

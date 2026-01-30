@@ -35,8 +35,8 @@
     "lint": "ts-standard --fix",
     "cucumber": "cucumber-js --require 'features/support/**/*.ts' --require-module ts-node/register --order random --retry 2 --retry-tag-filter flakey",
     "watch": "parcel --no-hmr example/index.html",
-    "server:start": "docker-compose up -d --build",
-    "server:restart": "docker-compose down -v && yarn server:start"
+    "server:start": "docker compose up -d --build",
+    "server:restart": "docker compose down -v && yarn server:start"
   },
   "dependencies": {
     "eventemitter3": "^5.0.4"

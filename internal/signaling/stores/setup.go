@@ -56,6 +56,19 @@ func FromEnv(ctx context.Context) (Store, chan struct{}, error) {
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to connect: %w", err)
 		}
+		// Connect explicitly to ensure the vector extension exists before running migrations.
+		// The AfterConnect hook above is not sufficient because migrations.Up uses stdlib.OpenDB
+		// which bypasses the pool's hooks.
+		conn, err := pgx.ConnectConfig(ctx, db.Config().ConnConfig)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to connect for setup: %w", err)
+		}
+		if _, err := conn.Exec(ctx, "CREATE EXTENSION IF NOT EXISTS vector"); err != nil {
+			conn.Close(ctx) // nolint:errcheck
+			return nil, nil, fmt.Errorf("failed to create vector extension: %w", err)
+		}
+		conn.Close(ctx) // nolint:errcheck
+
 		if err := migrations.Up(db.Config().ConnConfig); err != nil {
 			return nil, nil, fmt.Errorf("failed to migrate: %w", err)
 		}

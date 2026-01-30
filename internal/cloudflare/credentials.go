@@ -36,7 +36,13 @@ func NewCredentialsClient(appID, key string, lifetime time.Duration) *Credential
 }
 
 func (c *CredentialsClient) Run(ctx context.Context) {
-	if os.Getenv("ENV") != "production" && c.appID == "" {
+	logger := logging.GetLogger(ctx)
+
+	if c.appID == "" {
+		if os.Getenv("ENV") == "production" {
+			logger.Warn("Cloudflare App ID missing in production; falling back to Google STUN. Configure CLOUDFLARE_APP_ID to use Cloudflare.")
+		}
+
 		c.mutex.Lock()
 		c.cached = &Credentials{
 			URL: "stun:stun.l.google.com:19302",
@@ -44,8 +50,6 @@ func (c *CredentialsClient) Run(ctx context.Context) {
 		c.mutex.Unlock()
 		return
 	}
-
-	logger := logging.GetLogger(ctx)
 
 	for ctx.Err() == nil {
 		start := time.Now()

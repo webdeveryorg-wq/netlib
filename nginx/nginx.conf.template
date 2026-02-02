@@ -1,0 +1,100 @@
+events {
+    worker_connections 1024;
+}
+
+http {
+    # Настройки логирования для Fluent Bit
+    log_format json_access escape=json
+        '{'
+            '"level":"DEBUG",'
+            '"message":"NGINX $request $status",'
+            '"timestamp":"$time_iso8601",'
+            '"remote_addr":"$remote_addr",'
+            '"remote_user":"$remote_user",'
+            '"request":"$request",'
+            '"request_uri":"$request_uri",'
+            '"status":$status,'
+            '"scheme":"$scheme",'
+            '"bytes_sent":$bytes_sent_default,'
+            '"bytes_received":$content_length_default,'
+            '"http_referer":"$http_referer",'
+            '"http_user_agent":"$http_user_agent",'
+            '"http_x_forwarded_for":"$http_x_forwarded_for",'
+            '"request_time":$request_time,'
+            '"upstream_response_time":"$upstream_response_time",'
+            '"upstream_addr":"$upstream_addr"'
+        '}';
+        
+    # Настройки прокси
+    proxy_connect_timeout 30s;
+    proxy_send_timeout 30s;
+    proxy_read_timeout 30s;
+    proxy_buffering off;
+    
+    # Общие настройки для всех серверов
+    map $scheme $forwarded_proto {
+        default $scheme;
+        "http" "http";
+        "https" "https";
+    }
+    
+    # Map для значений по умолчанию
+    map $bytes_sent $bytes_sent_default {
+        "" "0";
+        default $bytes_sent;
+    }
+    
+    map $content_length $content_length_default {
+        "" "0";
+        default $content_length;
+    }
+
+    # HTTP сервер
+    server {
+        listen 80;
+        server_name _;
+        
+        # Логирование в stdout для Fluent Bit
+        access_log /dev/stdout json_access;
+        error_log /dev/stderr info;
+        
+        # Location для проверки certbot (ACME challenge)
+        location ^~ /.well-known/acme-challenge/ {
+            alias /var/www/certbot/.well-known/acme-challenge/;
+            try_files $uri =404;
+        }
+        
+        # Включаем общие location блоки
+        include /etc/nginx/locations.conf;
+    }
+    
+    # HTTPS сервер (SSL терминация в nginx)
+    server {
+        listen 443 ssl;
+        http2 on;
+        server_name ${NGINX_DOMAIN};
+        
+        # Логирование в stdout для Fluent Bit
+        access_log /dev/stdout json_access;
+        error_log /dev/stderr info;
+        
+        # SSL конфигурация
+        ssl_certificate ${SSL_CERT};
+        ssl_certificate_key ${SSL_KEY};
+        
+        # SSL настройки
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA384;
+        ssl_prefer_server_ciphers on;
+        ssl_session_cache shared:SSL:10m;
+        ssl_session_timeout 10m;
+        
+        # Заголовки для работы с SSL
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Ssl on;
+        
+        # Включаем общие location блоки
+        include /etc/nginx/locations.conf;
+    }
+}
+

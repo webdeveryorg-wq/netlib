@@ -1,4 +1,41 @@
 services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template:ro
+      - ./nginx/locations.conf:/etc/nginx/locations.conf
+      - ./nginx/upstream.conf:/etc/nginx/upstream.conf
+      - ./nginx/docker-entrypoint.sh:/docker-entrypoint.sh:ro
+      # SSL сертификаты от certbot
+      - certbot_certs:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    environment:
+      - NGINX_DOMAIN=${NGINX_DOMAIN}
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    depends_on:
+      - netlib
+    restart: always
+    # Entrypoint генерирует nginx.conf из шаблона и создаёт временный сертификат
+    entrypoint: ["/bin/sh", "/docker-entrypoint.sh"]
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - certbot_certs:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    environment:
+      - DOMAIN=${NGINX_DOMAIN}
+      - EMAIL=${CERTBOT_EMAIL}
+    # При первом запуске получает сертификат, затем проверяет обновление каждые 12 часов
+    entrypoint: "/bin/sh -c 'trap exit TERM; sleep 10; if [ ! -f /etc/letsencrypt/live/$${DOMAIN}/fullchain.pem ]; then echo \"Получение нового сертификата...\"; certbot certonly --webroot --webroot-path=/var/www/certbot -d $${DOMAIN} --email $${EMAIL} --agree-tos --no-eff-email --non-interactive; fi; while :; do sleep 12h & wait $${!}; certbot renew --quiet; done;'"
+    restart: always
+    depends_on:
+      - nginx
+
   netlib:
     build: .
     ports:
@@ -12,7 +49,6 @@ services:
     depends_on:
       - db
     restart: always
-
   db:
     image: pgvector/pgvector:pg15
     environment:
@@ -25,3 +61,8 @@ services:
 
 volumes:
   postgres_data:
+  certbot_certs:
+  certbot_www:
+
+networks:
+  default:

@@ -22,6 +22,12 @@ services:
     restart: always
     # Entrypoint генерирует nginx.conf из шаблона и создаёт временный сертификат
     entrypoint: ["/bin/sh", "/docker-entrypoint.sh"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   certbot:
     image: certbot/certbot
     volumes:
@@ -35,6 +41,11 @@ services:
     restart: always
     depends_on:
       - nginx
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   netlib:
     build: .
@@ -49,6 +60,12 @@ services:
     depends_on:
       - db
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   db:
     image: pgvector/pgvector:pg15
     environment:
@@ -58,6 +75,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   postgres_data:

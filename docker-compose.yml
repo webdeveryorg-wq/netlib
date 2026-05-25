@@ -4,6 +4,10 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
     volumes:
       - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template:ro
       - ./nginx/locations.conf:/etc/nginx/locations.conf

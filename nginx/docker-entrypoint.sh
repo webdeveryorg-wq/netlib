@@ -23,8 +23,10 @@ if [ -f "$CERT_PATH/fullchain.pem" ] && [ -f "$CERT_PATH/privkey.pem" ]; then
 else
     echo "Сертификат Let's Encrypt не найден. Создаём временный самоподписанный..."
     
-    # Устанавливаем openssl если его нет
-    apk add --no-cache openssl
+    # Устанавливаем openssl, только если его нет в системе
+    if ! command -v openssl >/dev/null 2>&1; then
+        apk add --no-cache openssl
+    fi
     
     # Генерируем временный самоподписанный сертификат в отдельной директории
     openssl req -x509 -nodes -days 1 -newkey rsa:2048 \

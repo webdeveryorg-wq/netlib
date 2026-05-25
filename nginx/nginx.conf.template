@@ -1,8 +1,9 @@
 events {
-    worker_connections 1024;
+    worker_connections 4096;
 }
 
 http {
+    keepalive_timeout 65;
     # Настройки логирования для Fluent Bit
     log_format json_access escape=json
         '{'
@@ -26,10 +27,37 @@ http {
         '}';
         
     # Настройки прокси
-    proxy_connect_timeout 30s;
-    proxy_send_timeout 30s;
-    proxy_read_timeout 30s;
+    proxy_connect_timeout 60s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 60s;
     proxy_buffering off;
+    
+    # Определение реального IP клиента с поддержкой Cloudflare и прокси
+    map $http_cf_connecting_ip $real_client_ip {
+        default $http_cf_connecting_ip;
+        ""      $http_x_forwarded_for;
+    }
+    map $real_client_ip $client_ip_to_limit {
+        default $real_client_ip;
+        ""      $remote_addr;
+    }
+
+    # Зоны ограничения частоты запросов и количества соединений
+    limit_req_zone $client_ip_to_limit zone=spam_limit:10m rate=10r/s;
+    limit_conn_zone $client_ip_to_limit zone=conn_limit:10m;
+    
+    # Статус-код при превышении лимитов (429 Too Many Requests)
+    limit_req_status 429;
+    limit_conn_status 429;
+
+    # Защита от Slowloris и ограничение размеров буферов
+    client_max_body_size 10M;
+    client_body_buffer_size 128k;
+    client_header_buffer_size 1k;
+    large_client_header_buffers 4 8k;
+    client_body_timeout 10s;
+    client_header_timeout 10s;
+    send_timeout 10s;
     
     # Общие настройки для всех серверов
     map $scheme $forwarded_proto {

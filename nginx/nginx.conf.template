@@ -45,7 +45,7 @@ http {
     }
 
     # Зоны ограничения частоты запросов и количества соединений
-    limit_req_zone $client_ip_to_limit zone=spam_limit:10m rate=10r/s;
+    limit_req_zone $client_ip_to_limit zone=spam_limit:10m rate=30r/s;
     limit_conn_zone $client_ip_to_limit zone=conn_limit:10m;
     
     # Статус-код при превышении лимитов (429 Too Many Requests)

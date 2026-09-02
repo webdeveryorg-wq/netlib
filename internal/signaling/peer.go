@@ -479,7 +479,7 @@ func (p *Peer) HandleJoinPacket(ctx context.Context, packet JoinPacket) error {
 		return fmt.Errorf("lobby code too long")
 	}
 
-	err := p.store.JoinLobby(ctx, p.Game, packet.Lobby, p.ID, packet.Password)
+	existingPeers, err := p.store.JoinLobby(ctx, p.Game, packet.Lobby, p.ID, packet.Password)
 	if err != nil {
 		switch err {
 		case stores.ErrNotFound:
@@ -520,7 +520,7 @@ func (p *Peer) HandleJoinPacket(ctx context.Context, packet JoinPacket) error {
 		return err
 	}
 
-	for _, otherID := range lobby.Peers {
+	for _, otherID := range existingPeers {
 		if otherID == p.ID {
 			continue
 		}

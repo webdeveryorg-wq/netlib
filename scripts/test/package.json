@@ -1,0 +1,11 @@
+{
+  "name": "netlib-regression-tools",
+  "private": true,
+  "scripts": {
+    "browser": "node browser-smoke.cjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.59.1",
+    "eventemitter3": "5.0.4"
+  }
+}

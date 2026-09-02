@@ -2,3 +2,6 @@
 dist
 node_modules
 .env
+/playwright/
+/reports/local-69212489-server-runbook.md
+/scripts/ops/prepare-server-update.sh

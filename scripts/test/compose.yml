@@ -1,0 +1,57 @@
+services:
+  db:
+    image: pgvector/pgvector:pg15
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: netlib_test
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U test -d netlib_test]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
+  netlib:
+    image: ${NETLIB_TEST_IMAGE:-netlib:69212489-candidate}
+    profiles: [runtime]
+    environment:
+      ENV: production
+      ADDR: :8080
+      DATABASE_URL: postgres://test:test@db:5432/netlib_test?sslmode=disable
+    depends_on:
+      db:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:alpine
+    profiles: [runtime]
+    ports:
+      - 127.0.0.1:18080:80
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../../nginx/locations.conf:/etc/nginx/locations.conf:ro
+      - certificates:/etc/letsencrypt
+    depends_on:
+      - netlib
+
+  go:
+    image: golang:1.25.1-bookworm
+    working_dir: /netlib
+    environment:
+      ENV: test
+      NETLIB_TEST_DATABASE_URL: postgres://test:test@db:5432/netlib_test?sslmode=disable
+    volumes:
+      - ../..:/netlib:ro
+      - go_cache:/root/.cache/go-build
+      - go_mod:/go/pkg/mod
+    depends_on:
+      db:
+        condition: service_healthy
+    command: [go, test, -race, -tags=integration, -count=1, ./...]
+
+volumes:
+  certificates:
+  go_cache:
+  go_mod:

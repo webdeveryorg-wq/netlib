@@ -36,7 +36,10 @@
     "cucumber": "cucumber-js --require 'features/support/**/*.ts' --require-module ts-node/register --order random --retry 2 --retry-tag-filter flakey",
     "watch": "parcel --no-hmr example/index.html",
     "server:start": "docker compose up -d --build",
-    "server:restart": "docker compose down -v && npm run server:start"
+    "server:restart": "docker compose restart netlib",
+    "server:build": "docker compose build netlib",
+    "server:update": "docker compose up -d --no-deps --no-build netlib",
+    "test:server": "docker compose -p netlib-regression -f scripts/test/compose.yml run --rm go"
   },
   "dependencies": {
     "eventemitter3": "^5.0.4"
